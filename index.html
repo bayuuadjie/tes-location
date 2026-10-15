@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tes Lokasi</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 16px; background: #f5f5f7; color: #222; }
+  h1 { font-size: 1.3rem; }
+  .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  button { padding: 10px 14px; border: 0; border-radius: 8px; background: #3f51b5; color: #fff; font-size: 1rem; margin: 4px 4px 4px 0; }
+  button.sec { background: #888; }
+  input { width: 45%; padding: 8px; margin: 4px 0; border: 1px solid #ccc; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 4px 0; border-bottom: 1px solid #eee; vertical-align: top; }
+  td:first-child { color: #666; width: 40%; }
+  #status { font-weight: 600; }
+  a { color: #3f51b5; }
+</style>
+</head>
+<body>
+  <h1>Tes Lokasi</h1>
+
+  <div class="card">
+    <button id="once">Ambil sekali</button>
+    <button id="watch">Pantau terus</button>
+    <button id="stop" class="sec">Stop</button>
+    <p id="status">Belum dimulai</p>
+  </div>
+
+  <div class="card">
+    <table>
+      <tr><td>Latitude</td><td id="lat">-</td></tr>
+      <tr><td>Longitude</td><td id="lng">-</td></tr>
+      <tr><td>Akurasi</td><td id="acc">-</td></tr>
+      <tr><td>Altitude</td><td id="alt">-</td></tr>
+      <tr><td>Kecepatan</td><td id="spd">-</td></tr>
+      <tr><td>Waktu</td><td id="time">-</td></tr>
+      <tr><td>Update ke-</td><td id="count">0</td></tr>
+      <tr><td>Peta</td><td id="map">-</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <strong>Bandingkan dengan titik target</strong><br>
+    <input id="tlat" type="number" step="any" placeholder="Lat target">
+    <input id="tlng" type="number" step="any" placeholder="Lng target">
+    <p id="dist">Selisih: -</p>
+  </div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  let watchId = null, count = 0;
+
+  function haversine(a, b, c, d) {
+    const R = 6371000, r = x => x * Math.PI / 180;
+    const dLat = r(c - a), dLng = r(d - b);
+    const h = Math.sin(dLat / 2) ** 2 +
+              Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  function show(pos) {
+    const c = pos.coords;
+    count++;
+    $('lat').textContent = c.latitude.toFixed(6);
+    $('lng').textContent = c.longitude.toFixed(6);
+    $('acc').textContent = c.accuracy != null ? c.accuracy.toFixed(1) + ' m' : '-';
+    $('alt').textContent = c.altitude != null ? c.altitude.toFixed(1) + ' m' : '-';
+    $('spd').textContent = c.speed != null ? c.speed.toFixed(1) + ' m/s' : '-';
+    $('time').textContent = new Date(pos.timestamp).toLocaleTimeString();
+    $('count').textContent = count;
+    $('map').innerHTML =
+      `<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${c.latitude}&mlon=${c.longitude}#map=17/${c.latitude}/${c.longitude}">Buka di OpenStreetMap</a>`;
+    $('status').textContent = 'Lokasi diterima';
+
+    const tl = parseFloat($('tlat').value), tg = parseFloat($('tlng').value);
+    if (!isNaN(tl) && !isNaN(tg)) {
+      const m = haversine(c.latitude, c.longitude, tl, tg);
+      $('dist').textContent = 'Selisih: ' + (m < 1000 ? m.toFixed(0) + ' m' : (m / 1000).toFixed(2) + ' km');
+    }
+  }
+
+  function fail(err) {
+    const msg = {
+      1: 'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di pengaturan browser.',
+      2: 'Posisi tidak tersedia. Periksa layanan lokasi di HP.',
+      3: 'Waktu habis saat mencari lokasi.'
+    };
+    $('status').textContent = msg[err.code] || err.message;
+  }
+
+  function supported() {
+    if (!('geolocation' in navigator)) {
+      $('status').textContent = 'Browser tidak mendukung Geolocation';
+      return false;
+    }
+    if (!window.isSecureContext) {
+      $('status').textContent = 'Butuh HTTPS atau localhost agar lokasi bisa dibaca';
+      return false;
+    }
+    return true;
+  }
+
+  const opts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+
+  $('once').onclick = () => {
+    if (!supported()) return;
+    $('status').textContent = 'Mencari lokasi...';
+    navigator.geolocation.getCurrentPosition(show, fail, opts);
+  };
+
+  $('watch').onclick = () => {
+    if (!supported() || watchId !== null) return;
+    $('status').textContent = 'Memantau...';
+    watchId = navigator.geolocation.watchPosition(show, fail, opts);
+  };
+
+  $('stop').onclick = () => {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    $('status').textContent = 'Dihentikan';
+  };
+</script>
+</body>
+</html>
