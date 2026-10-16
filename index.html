@@ -1,15 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tes Lokasi</title>
+<title>Tes Lokasi & IP</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 16px; background: #f5f5f7; color: #222; }
   h1 { font-size: 1.3rem; }
   .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  button { padding: 10px 14px; border: 0; border-radius: 8px; background: #3f51b5; color: #fff; font-size: 1rem; margin: 4px 4px 4px 0; }
+  button { padding: 10px 14px; border: 0; border-radius: 8px; background: #3f51b5; color: #fff; font-size: 1rem; margin: 4px 4px 4px 0; cursor: pointer; }
   button.sec { background: #888; }
   input { width: 45%; padding: 8px; margin: 4px 0; border: 1px solid #ccc; border-radius: 6px; }
   table { width: 100%; border-collapse: collapse; }
@@ -20,7 +19,7 @@
 </style>
 </head>
 <body>
-  <h1>Tes Lokasi</h1>
+  <h1>Tes Lokasi & IP</h1>
 
   <div class="card">
     <button id="once">Ambil sekali</button>
@@ -31,6 +30,7 @@
 
   <div class="card">
     <table>
+      <tr><td>IP Address</td><td id="ip">Memuat...</td></tr>
       <tr><td>Latitude</td><td id="lat">-</td></tr>
       <tr><td>Longitude</td><td id="lng">-</td></tr>
       <tr><td>Akurasi</td><td id="acc">-</td></tr>
@@ -53,6 +53,20 @@
   const $ = id => document.getElementById(id);
   let watchId = null, count = 0;
 
+  // Fungsi untuk mengambil IP Publik
+  async function fetchIP() {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      $('ip').textContent = data.ip;
+    } catch (error) {
+      $('ip').textContent = 'Gagal memuat IP';
+    }
+  }
+
+  // Panggil fungsi IP saat halaman pertama kali dimuat
+  fetchIP();
+
   function haversine(a, b, c, d) {
     const R = 6371000, r = x => x * Math.PI / 180;
     const dLat = r(c - a), dLng = r(d - b);
@@ -65,19 +79,17 @@
     const c = pos.coords;
     count++;
     $('lat').textContent = c.latitude.toFixed(6);
-    $('lng').textContent = c.longitude.toFixed(6);
-    $('acc').textContent = c.accuracy != null ? c.accuracy.toFixed(1) + ' m' : '-';
+    $('lng').textContent = c.longitude.toFixed(6);$('acc').textContent = c.accuracy != null ? c.accuracy.toFixed(1) + ' m' : '-';
     $('alt').textContent = c.altitude != null ? c.altitude.toFixed(1) + ' m' : '-';
     $('spd').textContent = c.speed != null ? c.speed.toFixed(1) + ' m/s' : '-';
-    $('time').textContent = new Date(pos.timestamp).toLocaleTimeString();
-    $('count').textContent = count;
+    $('time').textContent = new Date(pos.timestamp).toLocaleTimeString();$('count').textContent = count;
     $('map').innerHTML =
       `<a target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${c.latitude}&mlon=${c.longitude}#map=17/${c.latitude}/${c.longitude}">Buka di OpenStreetMap</a>`;
     $('status').textContent = 'Lokasi diterima';
 
     const tl = parseFloat($('tlat').value), tg = parseFloat($('tlng').value);
     if (!isNaN(tl) && !isNaN(tg)) {
-      const m = haversine(c.latitude, c.longitude, tl, tg);
+      const m = hashv = haversine(c.latitude, c.longitude, tl, tg);
       $('dist').textContent = 'Selisih: ' + (m < 1000 ? m.toFixed(0) + ' m' : (m / 1000).toFixed(2) + ' km');
     }
   }
